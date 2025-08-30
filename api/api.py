@@ -1,42 +1,41 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
-
-app = Flask(__name__)
-
-# 🟢 Add this route so "/" doesn't return 404
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"status": "API is running 🚀"}), 200
-
-# Example existing validate route
-@app.route("/validate", methods=["GET"])
-def validate():
-    key = request.args.get("key")
-    if keys_collection.find_one({"key": key}):
-        return jsonify({"valid": True})
-    return jsonify({"valid": False})
-from flask import Flask, request, jsonify
-from pymongo import MongoClient
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app)  # Enable Cross-Origin requests
+
+# Load Mongo URI from environment variables
 MONGO_URI = os.getenv("MONGO_URI")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
-client = MongoClient(MONGO_URI)
-db = client["luarmor_free_panel"]
-keys_collection = db["keys"]
+
+# Connect to MongoDB
+try:
+    client = MongoClient(MONGO_URI)
+    db = client["luarmor"]  # database name
+    keys_collection = db["keys"]  # collection name
+except Exception as e:
+    print("Error connecting to MongoDB:", e)
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"status": "API is running 🚀"})
 
 @app.route("/validate", methods=["GET"])
 def validate():
-    key = request.args.get("key")
-    if keys_collection.find_one({"key": key}):
-        return jsonify({"status": "valid"})
-    return jsonify({"status": "invalid"}), 404
+    try:
+        key = request.args.get("key")
+        if not key:
+            return jsonify({"error": "Key parameter is missing"}), 400
 
-@app.route("/stats", methods=["GET"])
-def stats():
-    total = keys_collection.count_documents({})
-    return jsonify({"total_keys": total})
+        # Check if key exists in DB
+        if keys_collection.find_one({"key": key}):
+            return jsonify({"status": "valid"}), 200
+        else:
+            return jsonify({"status": "invalid"}), 404
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
