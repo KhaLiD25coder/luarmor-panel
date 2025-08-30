@@ -1,5 +1,22 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
+
+app = Flask(__name__)
+
+# 🟢 Add this route so "/" doesn't return 404
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"status": "API is running 🚀"}), 200
+
+# Example existing validate route
+@app.route("/validate", methods=["GET"])
+def validate():
+    key = request.args.get("key")
+    if keys_collection.find_one({"key": key}):
+        return jsonify({"valid": True})
+    return jsonify({"valid": False})
+from flask import Flask, request, jsonify
+from pymongo import MongoClient
 import os
 
 app = Flask(__name__)
